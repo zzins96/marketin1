@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 광고 자동 최적화 & AI 소재 기획 대시보드</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter / Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        naver: {
+                            DEFAULT: '#03C75A',
+                            dark: '#02b150',
+                            light: '#e8f9f0',
+                            accent: '#00bf52'
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+        }
+        .active-tab {
+            border-bottom: 3px solid #03C75A;
+            color: #03C75A;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-naver rounded-xl flex items-center justify-center text-white font-extrabold text-xl shadow-md">
+                        N
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold text-slate-900">네이버 광고 AI 최적화 센터</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold bg-naver-light text-naver rounded-full border border-naver/20">v2.4 Enterprise</span>
+                        </div>
+                        <p class="text-xs text-slate-500">검색광고 & GFA 자동 분석 · 피드백 · 소재 디벨롭 엔진</p>
+                    </div>
+                </div>
+
+                <!-- Global Actions & API Status -->
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600">
+                        <span class="w-2.5 h-2.5 bg-naver rounded-full animate-pulse"></span>
+                        <span>API 연동 상태: <strong class="text-slate-900">정상 (Naver Ad API)</strong></span>
+                    </div>
+
+                    <button onclick="triggerDataRefresh()" class="flex items-center space-x-1.5 bg-naver hover:bg-naver-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95">
+                        <i class="fa-solid fa-arrows-rotate text-xs" id="refresh-icon"></i>
+                        <span>데이터 동기화</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Sidebar / Filter Control -->
+        <aside class="lg:col-span-3 space-y-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-3">
+                    <i class="fa-solid fa-sliders text-naver"></i>
+                    <span>광고 계정 & 파라미터</span>
+                </h3>
+
+                <!-- Account ID -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">고객 ID (Customer ID)</label>
+                    <div class="relative">
+                        <input type="text" value="NV-2026-90412" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-naver">
+                        <i class="fa-solid fa-check text-naver absolute right-3 top-2.5 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- API Key Info -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">연동 서비스</label>
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
+                            <span class="text-slate-700 font-medium">검색광고 API</span>
+                            <span class="text-xs text-naver font-bold"><i class="fa-solid fa-circle-check"></i> 연결됨</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
+                            <span class="text-slate-700 font-medium">디스플레이(GFA) API</span>
+                            <span class="text-xs text-naver font-bold"><i class="fa-solid fa-circle-check"></i> 연결됨</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">분석 기간</label>
+                    <select id="date-range" onchange="updateDashboardData()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-naver">
+                        <option value="7">최근 7일 (2026.09.24 ~ 2026.09.30)</option>
+                        <option value="30" selected>최근 30일 (2026.09.01 ~ 2026.09.30)</option>
+                        <option value="90">최근 90일 (2026.07.01 ~ 2026.09.30)</option>
+                    </select>
+                </div>
+
+                <!-- Business Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">업종 / 캠페인 카테고리</label>
+                    <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-naver">
+                        <option>교육 / 자격증 (사회복지사·평생교육)</option>
+                        <option>커머스 / 패션·뷰티</option>
+                        <option>IT / SaaS 솔루션</option>
+                        <option>금융 / 병원·법률 서비스</option>
+                    </select>
+                </div>
+
+                <!-- Quick Benchmark Target -->
+                <div class="p-3 bg-naver-light/60 rounded-xl border border-naver/20 text-xs space-y-1">
+                    <span class="font-bold text-naver-dark block"><i class="fa-solid fa-bullseye mr-1"></i> 목표 KPI 설정</span>
+                    <div class="flex justify-between text-slate-700">
+                        <span>목표 ROAS:</span>
+                        <span class="font-bold">250% 이상</span>
+                    </div>
+                    <div class="flex justify-between text-slate-700">
+                        <span>허용 CPA:</span>
+                        <span class="font-bold">35,000원 이하</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick AI Assistant Status -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-md space-y-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-robot text-naver text-lg"></i>
+                    <h4 class="font-bold text-sm">AI Optimization Bot</h4>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    최근 30일간의 데이터를 분석하여 <strong class="text-naver">4개의 주요 개선안</strong>과 <strong class="text-naver">3개의 신규 소재</strong>를 작성했습니다.
+                </p>
+                <div class="pt-2 border-t border-slate-700 text-xs text-slate-400 flex justify-between">
+                    <span>마지막 진단:방금 전</span>
+                    <span class="text-naver font-medium">자동 갱신 활성</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="lg:col-span-9 space-y-6">
+
+            <!-- Navigation Tabs Header -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 flex space-x-1">
+                <button id="tab-btn-1" onclick="switchTab(1)" class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center space-x-2 active-tab">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <span>검색광고 분석 & 피드백</span>
+                </button>
+                <button id="tab-btn-2" onclick="switchTab(2)" class="flex-1 py-3 px-4 rounded-xl font-bold text-sm text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-object-group"></i>
+                    <span>디스플레이(GFA) 소재 디벨롭</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: Search Ads Analytics -->
+            <div id="tab-content-1" class="space-y-6">
+                
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">총 집행 비용</span>
+                        <div class="text-lg sm:text-xl font-extrabold text-slate-900" id="metric-cost">12,450,000원</div>
+                        <span class="text-xs text-slate-400 mt-1 block">전월 대비 +4.2%</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">전환 매출액</span>
+                        <div class="text-lg sm:text-xl font-extrabold text-naver" id="metric-sales">35,860,000원</div>
+                        <span class="text-xs text-emerald-600 mt-1 block font-semibold"><i class="fa-solid fa-arrow-up text-xs"></i> +12.8%</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">평균 ROAS</span>
+                        <div class="text-lg sm:text-xl font-extrabold text-slate-900" id="metric-roas">288.0%</div>
+                        <span class="text-xs text-emerald-600 mt-1 block font-semibold">목표(250%) 초과 달성</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">총 클릭수</span>
+                        <div class="text-lg sm:text-xl font-extrabold text-slate-900" id="metric-clicks">18,420회</div>
+                        <span class="text-xs text-slate-400 mt-1 block">평균 CPC 675원</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm col-span-2 md:col-span-1">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">총 전환수</span>
+                        <div class="text-lg sm:text-xl font-extrabold text-slate-900" id="metric-conv">412건</div>
+                        <span class="text-xs text-slate-400 mt-1 block">전환율(CVR) 2.24%</span>
+                    </div>
+                </div>
+
+                <!-- AI Feedback Recommendations Section -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-7 h-7 bg-naver-light text-naver rounded-lg flex items-center justify-center font-bold text-sm">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </span>
+                            <h3 class="font-bold text-slate-900 text-base">AI 기반 실시간 광고 피드백 & 개선안</h3>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">분석 데이터: 키워드·시간대·연령대 입체 분석</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="feedback-container">
+                        <!-- Dynamic Feedbacks injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Interactive Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Hourly Trend Chart -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-clock text-naver"></i>
+                                <span>시간대별 전환수 & 광고비 지출</span>
+                            </h4>
+                            <span class="text-xs text-slate-400">00시 ~ 23시</span>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="hourlyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Age Group Breakdown Chart -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                                <i class="fa-solid fa-users text-naver"></i>
+                                <span>연령대별 전환 분포 및 효율</span>
+                            </h4>
+                            <span class="text-xs text-slate-400">전환 기여도 (%)</span>
+                        </div>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="ageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Keyword Detail Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-3 p-5">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-2">
+                        <h4 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-key text-naver"></i>
+                            <span>키워드별 성과 및 입찰 최적화 제안</span>
+                        </h4>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="kw-search" onkeyup="filterKeywords()" placeholder="키워드 검색..." class="bg-slate-50 border border-slate-200 text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-naver">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto scrollbar-thin">
+                        <table class="w-full text-xs text-left text-slate-700">
+                            <thead class="bg-slate-50 text-slate-600 font-semibold uppercase border-y border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">키워드</th>
+                                    <th class="py-3 px-4 text-right">노출수</th>
+                                    <th class="py-3 px-4 text-right">클릭수</th>
+                                    <th class="py-3 px-4 text-right">소진 비용</th>
+                                    <th class="py-3 px-4 text-right">전환수</th>
+                                    <th class="py-3 px-4 text-right">ROAS</th>
+                                    <th class="py-3 px-4 text-center">AI 추천 조치 Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keyword-table-body" class="divide-y divide-slate-100 font-medium">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: Display Ads (GFA) Creative Development -->
+            <div id="tab-content-2" class="space-y-6 hidden">
+
+                <!-- Best vs Worst Creative Comparison -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Top Performing Creatives -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-md flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-trophy"></i>
+                                </span>
+                                <h3 class="font-bold text-slate-900 text-sm">BEST 우수 성과 소재 (Top 2)</h3>
+                            </div>
+                            <span class="text-xs text-emerald-600 font-semibold">ROAS 300%+ 우수</span>
+                        </div>
+                        <div class="space-y-3" id="top-creatives-list">
+                            <!-- Dynamic Best Creatives -->
+                        </div>
+                    </div>
+
+                    <!-- Worst Performing Creatives -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-6 h-6 bg-rose-100 text-rose-600 rounded-md flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                </span>
+                                <h3 class="font-bold text-slate-900 text-sm">WORST 저효율 소재 (교체/OFF 대상)</h3>
+                            </div>
+                            <span class="text-xs text-rose-500 font-semibold">CTR < 0.8% 저조</span>
+                        </div>
+                        <div class="space-y-3" id="worst-creatives-list">
+                            <!-- Dynamic Worst Creatives -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- AI Generated Developed Creative Specs -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-naver text-white text-xs px-2.5 py-0.5 rounded-full font-bold">AI Auto Planner</span>
+                                <h3 class="font-bold text-slate-900 text-base">우수 소재 기반 '디벨롭' 신규 기획안 (3종)</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">잘 나오는 소재의 셀링 포인트를 유지하고, 카피 포지셔닝과 비주얼 콘셉트를 다변화한 기획안입니다.</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openCreativeModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <span>커스텀 소재 생성</span>
+                            </button>
+                            <button onclick="exportPlansCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5">
+                                <i class="fa-solid fa-download text-xs"></i>
+                                <span>CSV 다운로드</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cards Grid for Developed Creatives -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="creative-plans-container">
+                        <!-- Dynamic Creative Cards -->
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Custom Creative Generation Modal -->
+    <div id="creative-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-naver"></i>
+                    <h3 class="font-bold text-sm">신규 디스플레이 소재 AI 기획 생성기</h3>
+                </div>
+                <button onclick="closeCreativeModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">참고할 소구점 (USP) / 키워드</label>
+                    <input type="text" id="modal-usp" value="사회복지사2급 100% 온라인, 수강료 50% 할인, 1:1 전담 관리" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:border-naver">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">타겟 페르소나</label>
+                    <select id="modal-target" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:border-naver">
+                        <option>3040 재취업 준비 주부</option>
+                        <option>퇴근 후 자격증 준비 직장인</option>
+                        <option>5060 은퇴 후 제2의 직업 준비생</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">메인 카피 톤앤매너</label>
+                    <select id="modal-tone" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:border-naver">
+                        <option>긴급성/개정 직전 한정 혜택 강조형</option>
+                        <option>공감/감성 중심 스토리텔링형</option>
+                        <option>직관적 수치/비교 검증형</option>
+                    </select>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-5 py-3 flex justify-end space-x-2 border-t border-slate-200">
+                <button onclick="closeCreativeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-xs font-semibold text-slate-700">취소</button>
+                <button onclick="generateCustomPlan()" class="px-4 py-2 bg-naver hover:bg-naver-dark text-white rounded-lg text-xs font-semibold flex items-center space-x-1">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>기획안 자동 생성</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-check text-naver text-base"></i>
+        <span id="toast-message">알림 메시지</span>
+    </div>
+
+    <script>
+        // Data Store (Mock Simulation matching Naver API Structures)
+        const mockData = {
+            keywords: [
+                { keyword: "사회복지사2급", imp: 84200, clicks: 4120, cost: 2450000, conv: 118, sales: 9440000, roas: 385, cpc: 594 },
+                { keyword: "사회복지사자격증", imp: 62000, clicks: 3100, cost: 2100000, conv: 82, sales: 6560000, roas: 312, cpc: 677 },
+                { keyword: "보육교사2급", imp: 45000, clicks: 1800, cost: 1350000, conv: 42, sales: 3360000, roas: 248, cpc: 750 },
+                { keyword: "학점은행제비용", imp: 98000, clicks: 5200, cost: 3800000, conv: 51, sales: 4080000, roas: 107, cpc: 730 },
+                { keyword: "사회복지사취업", imp: 31000, clicks: 1450, cost: 890000, conv: 38, sales: 3040000, roas: 341, cpc: 613 },
+                { keyword: "평생교육원주말반", imp: 22000, clicks: 920, cost: 710000, conv: 12, sales: 960000, roas: 135, cpc: 771 },
+                { keyword: "사회복지사인강", imp: 54000, clicks: 1830, cost: 1150000, conv: 69, sales: 8420000, roas: 732, cpc: 628 }
+            ],
+            timeSeries: {
+                hours: Array.from({length: 24}, (_, i) => `${i}시`),
+                conversions: [2, 1, 0, 0, 1, 3, 8, 18, 35, 42, 38, 30, 28, 34, 40, 36, 25, 20, 22, 29, 31, 24, 12, 5],
+                cost: [40, 30, 20, 20, 30, 50, 90, 150, 280, 320, 300, 250, 240, 270, 310, 290, 210, 180, 200, 250, 270, 210, 120, 60] // in 1,000 KRW
+            },
+            demographics: {
+                labels: ['10대', '20대', '30대', '40대', '50대', '60대 이상'],
+                data: [1, 8, 32, 41, 15, 3] // Percentage
+            },
+            bestCreatives: [
+                { id: "GFA_CR_003", headline: "2026년 개정 전 마지막 100% 무시험 수강 기회", style: "타이머/긴급성 비주얼", ctr: "3.52%", cvr: "3.49%", roas: "471%" },
+                { id: "GFA_CR_001", headline: "사회복지사2급 최단기 수료 반값 특별 수강반", style: "인물 프로필형", ctr: "3.00%", cvr: "4.00%", roas: "450%" }
+            ],
+            worstCreatives: [
+                { id: "GFA_CR_004", headline: "학점은행제 관련 무시험 자격증 세부 안내 모음", style: "텍스트 위주 카드", ctr: "0.62%", cvr: "0.88%", roas: "30%" },
+                { id: "GFA_CR_002", headline: "직장인 퇴근후 자격증 공부 도전해보세요", style: "일반 그래픽", ctr: "0.95%", cvr: "1.20%", roas: "90%" }
+            ],
+            developedPlans: [
+                {
+                    concept: "우수 소재 [개정 전 마지막 기회] - 긴급성 극대화형",
+                    mainCopy: "🚨 2026년 법개정 직전! 사회복지사2급 마지막 무시험 반값 수강",
+                    subCopy: "개정 후 이수 과목 및 실습 시간 대폭 증가! 이번 달 선착순 50명 수강료 지원",
+                    visual: "Red/Yellow 경고 배너 톤 + D-DAY 카운트다운 타이머 그래픽 + 자격증 샘플",
+                    cta: "무료 자격증 가이드 신청하기 >",
+                    reason: "ROAS 471%를 기록한 GFA_CR_003의 '법개정 이슈'를 메인 후킹으로 극대화함"
+                },
+                {
+                    concept: "우수 소재 [3040 주부/직장인] - 페르소나 맞춤 공감형",
+                    mainCopy: "아이 키우며 하루 1시간! 40대 주부 재취업 자격증 1위",
+                    subCopy: "1:1 전담 학습 멘토 시험/과제 밀착 케어! 출석은 모바일로 100% 해결",
+                    visual: "밝은 표정의 3040 여성 타겟 인물 이미지 + 만족도 99% 배지",
+                    cta: "내 맞춤 수강료 계산해보기 >",
+                    reason: "전환 기여도 1위 연령층(40대 41%)을 겨냥한 페르소나 맞춤 비주얼 확장"
+                },
+                {
+                    concept: "비교/팩트 강조형 - 최단기 이수 보장",
+                    mainCopy: "남들은 2년 걸릴 때, 1년 만에 끝낸 사회복지사 취득 비결?",
+                    subCopy: "실습 대학 연계 서비스 무료 제공 + 최저가 수강료 보장제 실시",
+                    visual: "비교 인포그래픽 (타 기관 vs 본원 차이점 체크리스트)",
+                    cta: "최단기 이수 플랜 받기 >",
+                    reason: "탐색 고객의 주요 장애요인인 '실습 연계'와 '기간' 불안 요소를 사전에 해소"
+                }
+            ]
+        };
+
+        let hourlyChartObj = null;
+        let ageChartObj = null;
+
+        // Initialize Application
+        window.onload = function() {
+            renderMetrics();
+            renderFeedbacks();
+            renderCharts();
+            renderKeywordTable(mockData.keywords);
+            renderCreatives();
+        };
+
+        function switchTab(tabIndex) {
+            const tab1 = document.getElementById('tab-content-1');
+            const tab2 = document.getElementById('tab-content-2');
+            const btn1 = document.getElementById('tab-btn-1');
+            const btn2 = document.getElementById('tab-btn-2');
+
+            if (tabIndex === 1) {
+                tab1.classList.remove('hidden');
+                tab2.classList.add('hidden');
+                btn1.classList.add('active-tab');
+                btn1.classList.remove('text-slate-500');
+                btn2.classList.remove('active-tab');
+                btn2.classList.add('text-slate-500');
+            } else {
+                tab1.classList.add('hidden');
+                tab2.classList.remove('hidden');
+                btn2.classList.add('active-tab');
+                btn2.classList.remove('text-slate-500');
+                btn1.classList.remove('active-tab');
+                btn1.classList.add('text-slate-500');
+            }
+        }
+
+        function renderMetrics() {
+            // Already populated in HTML mockup with simulated numbers
+        }
+
+        function renderFeedbacks() {
+            const container = document.getElementById('feedback-container');
+            const feedbacks = [
+                {
+                    type: 'danger',
+                    badge: '예산 절감',
+                    title: '저효율 키워드 예산 차단 제안',
+                    desc: '<strong>[학점은행제비용]</strong> 키워드는 소진 비용(380만원) 대비 ROAS가 107%로 목표(250%) 미달입니다. 해당 키워드의 입찰가를 30% 낮추거나 긍정 수식어 조합으로 세부 변경하세요.',
+                    icon: 'fa-triangle-exclamation'
+                },
+                {
+                    type: 'success',
+                    badge: '예산 증액',
+                    title: '고효율 효자 키워드 예산 확장',
+                    desc: '<strong>[사회복지사인강]</strong>(ROAS 732%), <strong>[사회복지사2급]</strong>(ROAS 385%)의 노출 순위가 2~3위권에 위치해 있습니다. 입찰가를 15% 인상하여 상위 노출을 확보하세요.',
+                    icon: 'fa-arrow-trend-up'
+                },
+                {
+                    type: 'info',
+                    badge: '골든 타임',
+                    title: '시간대 입찰 가중치 조정 (+20%)',
+                    desc: '전환이 집중되는 <strong>[09시~11시] 및 [14시~16시]</strong> 시간대에 입찰 가중치를 +20% 설정하고, 전환이 드문 01시~05시 입찰을 최소화하세요.',
+                    icon: 'fa-clock'
+                },
+                {
+                    type: 'info',
+                    badge: '타겟 최적화',
+                    title: '메인 구매 타겟 연령층 집중',
+                    desc: '전환의 <strong>73%가 3040 연령층</strong>에 집중되어 있습니다. 디스플레이 광고 및 랜딩페이지의 텍스트 톤을 3040 맞춤형 언어로 단일화하세요.',
+                    icon: 'fa-user-check'
+                }
+            ];
+
+            container.innerHTML = feedbacks.map(fb => {
+                let borderClass = 'border-slate-200 bg-slate-50';
+                let iconClass = 'text-blue-500 bg-blue-100';
+                let badgeClass = 'bg-blue-100 text-blue-700';
+
+                if (fb.type === 'danger') {
+                    borderClass = 'border-rose-200 bg-rose-50/50';
+                    iconClass = 'text-rose-600 bg-rose-100';
+                    badgeClass = 'bg-rose-100 text-rose-700';
+                } else if (fb.type === 'success') {
+                    borderClass = 'border-emerald-200 bg-emerald-50/50';
+                    iconClass = 'text-emerald-600 bg-emerald-100';
+                    badgeClass = 'bg-emerald-100 text-emerald-700';
+                }
+
+                return `
+                    <div class="p-4 rounded-xl border ${borderClass} space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-7 h-7 rounded-lg ${iconClass} flex items-center justify-center text-xs">
+                                    <i class="fa-solid ${fb.icon}"></i>
+                                </span>
+                                <h4 class="font-bold text-xs text-slate-900">${fb.title}</h4>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}">${fb.badge}</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed pl-9">${fb.desc}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCharts() {
+            // Hourly Chart
+            const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+            if (hourlyChartObj) hourlyChartObj.destroy();
+
+            hourlyChartObj = new Chart(ctxHourly, {
+                type: 'line',
+                data: {
+                    labels: mockData.timeSeries.hours,
+                    datasets: [
+                        {
+                            label: '시간대별 전환수 (건)',
+                            data: mockData.timeSeries.conversions,
+                            borderColor: '#03C75A',
+                            backgroundColor: 'rgba(3, 199, 90, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // Age Demographics Chart
+            const ctxAge = document.getElementById('ageChart').getContext('2d');
+            if (ageChartObj) ageChartObj.destroy();
+
+            ageChartObj = new Chart(ctxAge, {
+                type: 'doughnut',
+                data: {
+                    labels: mockData.demographics.labels,
+                    datasets: [{
+                        data: mockData.demographics.data,
+                        backgroundColor: [
+                            '#cbd5e1', '#94a3b8', '#03C75A', '#0284c7', '#38bdf8', '#e2e8f0'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 11, family: 'Noto Sans KR' } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderKeywordTable(data) {
+            const tbody = document.getElementById('keyword-table-body');
+            tbody.innerHTML = data.map(item => {
+                let roasColor = 'text-slate-900';
+                let actionBtn = `<span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px]">유지</span>`;
+
+                if (item.roas >= 300) {
+                    roasColor = 'text-emerald-600 font-bold';
+                    actionBtn = `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 font-bold rounded text-[10px]">▲ 입찰가 +15%</span>`;
+                } else if (item.roas < 150) {
+                    roasColor = 'text-rose-600 font-bold';
+                    actionBtn = `<span class="px-2 py-1 bg-rose-100 text-rose-700 font-bold rounded text-[10px]">▼ 입찰가 -30%</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900">${item.keyword}</td>
+                        <td class="py-3 px-4 text-right">${item.imp.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right">${item.clicks.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right">${item.cost.toLocaleString()}원</td>
+                        <td class="py-3 px-4 text-right font-semibold">${item.conv}건</td>
+                        <td class="py-3 px-4 text-right ${roasColor}">${item.roas}%</td>
+                        <td class="py-3 px-4 text-center">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterKeywords() {
+            const query = document.getElementById('kw-search').value.toLowerCase();
+            const filtered = mockData.keywords.filter(k => k.keyword.toLowerCase().includes(query));
+            renderKeywordTable(filtered);
+        }
+
+        function renderCreatives() {
+            // Best List
+            const bestContainer = document.getElementById('top-creatives-list');
+            bestContainer.innerHTML = mockData.bestCreatives.map(c => `
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-mono font-bold text-naver">${c.id}</span>
+                        <span class="font-bold text-emerald-600">ROAS ${c.roas}</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-900">"${c.headline}"</p>
+                    <div class="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                        <span>스타일: ${c.style}</span>
+                        <span>CTR: <strong>${c.ctr}</strong> | CVR: <strong>${c.cvr}</strong></span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Worst List
+            const worstContainer = document.getElementById('worst-creatives-list');
+            worstContainer.innerHTML = mockData.worstCreatives.map(c => `
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-mono font-bold text-slate-500">${c.id}</span>
+                        <span class="font-bold text-rose-500">ROAS ${c.roas}</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-800">"${c.headline}"</p>
+                    <div class="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                        <span>스타일: ${c.style}</span>
+                        <span>CTR: <strong>${c.ctr}</strong> | CVR: <strong>${c.cvr}</strong></span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Developed Plans
+            renderCreativePlans();
+        }
+
+        function renderCreativePlans() {
+            const container = document.getElementById('creative-plans-container');
+            container.innerHTML = mockData.developedPlans.map((plan, idx) => `
+                <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold bg-naver-light text-naver px-2.5 py-1 rounded-full border border-naver/20">기획안 0${idx + 1}</span>
+                            <button onclick="copyToClipboard('${plan.mainCopy}')" class="text-slate-400 hover:text-slate-700 text-xs" title="카피 복사">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+
+                        <h4 class="font-bold text-sm text-slate-900 border-b border-slate-200 pb-2">${plan.concept}</h4>
+
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <span class="text-slate-400 text-[10px] font-semibold block uppercase">Main Copy</span>
+                                <p class="font-bold text-slate-900 bg-white p-2.5 rounded-lg border border-slate-200">${plan.mainCopy}</p>
+                            </div>
+
+                            <div>
+                                <span class="text-slate-400 text-[10px] font-semibold block uppercase">Sub Copy</span>
+                                <p class="text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200">${plan.subCopy}</p>
+                            </div>
+
+                            <div>
+                                <span class="text-slate-400 text-[10px] font-semibold block uppercase">Visual Direction</span>
+                                <p class="text-slate-600 bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100 text-[11px]">🎨 ${plan.visual}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-200 space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">CTA 버튼:</span>
+                            <span class="font-bold text-naver border border-naver px-2 py-0.5 rounded bg-white">${plan.cta}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-tight">💡 ${plan.reason}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreativeModal() {
+            document.getElementById('creative-modal').classList.remove('hidden');
+        }
+
+        function closeCreativeModal() {
+            document.getElementById('creative-modal').classList.add('hidden');
+        }
+
+        function generateCustomPlan() {
+            const usp = document.getElementById('modal-usp').value;
+            const target = document.getElementById('modal-target').value;
+
+            const newPlan = {
+                concept: `AI 생성 커스텀 소재 - [${target}] 타겟`,
+                mainCopy: `🔥 ${target} 맞춤! ${usp.split(',')[0] || '최단기 자격증 이수'}`,
+                subCopy: `${usp.split(',')[1] || '모바일 100% 출석 가능'}, 오늘 신청 시 특별 혜택 제공`,
+                visual: `${target} 타겟 선호 색상 톤 + 수강 혜택 강조 그래픽`,
+                cta: "실시간 할인 혜택 조회하기 >",
+                reason: `입력된 USP(${usp})를 기반으로 지정 타겟층 맞춤 AI 생성 카피`
+            };
+
+            mockData.developedPlans.unshift(newPlan);
+            renderCreativePlans();
+            closeCreativeModal();
+            showToast("신규 디스플레이 소재 기획안이 생성되었습니다!");
+        }
+
+        function triggerDataRefresh() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                showToast("네이버 광고 API 최신 데이터 동기화 완료");
+            }, 1000);
+        }
+
+        function updateDashboardData() {
+            showToast("선택된 기간의 데이터로 재계산되었습니다.");
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            showToast("카피 문구가 클립보드에 복사되었습니다.");
+        }
+
+        function exportPlansCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "콘셉트,메인카피,서브카피,비주얼가이드,CTA버튼,기획의도\n";
+
+            mockData.developedPlans.forEach(p => {
+                csvContent += `"${p.concept}","${p.mainCopy}","${p.subCopy}","${p.visual}","${p.cta}","${p.reason}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "naver_gfa_creative_plans.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("소재 기획안 CSV 파일이 다운로드되었습니다.");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
